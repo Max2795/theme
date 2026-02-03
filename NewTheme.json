@@ -1,0 +1,427 @@
+{
+  "name": "Silver Simplicity",
+  "dataColors": [
+    "#C6C7CC",
+    "#717277",
+    "#C2B7AE",
+    "#362D2B",
+    "#8B8481",
+    "#E0E1E7",
+    "#595959",
+    "#E9E6E1"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#121212",
+  "tableAccent": "#4E9466",
+  "good": "#64FBD3",
+  "neutral": "#DEF0F8",
+  "bad": "#FF7AE3",
+  "maximum": "#2B2E54",
+  "center": "#92C5F8",
+  "minimum": "#F1F5F9",
+  "textClasses": {
+    "callout": {
+      "fontFace": "Segoe UI",
+      "color": "#252423",
+      "fontSize": 23
+    },
+    "title": {
+      "fontFace": "Segoe UI",
+      "color": "#252423",
+      "fontSize": 8
+    },
+    "header": {
+      "fontFace": "Segoe UI",
+      "color": "#252423",
+      "fontSize": 10
+    },
+    "label": {
+      "fontFace": "Segoe UI",
+      "color": "#B3B3B3",
+      "fontSize": 8
+    },
+    "smallLightLabel": {
+      "color": "#605E5C",
+      "fontFace": "Segoe UI",
+      "fontSize": 8
+    },
+    "largeLightLabel": {
+      "color": "#605E5C",
+      "fontFace": "Segoe UI",
+      "fontSize": 8
+    },
+    "boldLabel": {
+      "fontFace": "Segoe UI"
+    },
+    "lightLabel": {
+      "color": "#605E5C"
+    },
+    "smallLabel": {
+      "fontSize": 8
+    },
+    "largeLabel": {
+      "fontFace": "Segoe UI",
+      "fontSize": 8
+    },
+    "semiboldLabel": {
+      "fontFace": "Segoe UI"
+    },
+    "largeTitle": {
+      "fontFace": "Segoe UI",
+      "fontSize": 10,
+      "color": "#000000"
+    }
+  },
+  "visualStyles": {
+    "*": {
+      "*": {
+        "border": [
+          {
+            "color": {
+              "solid": {
+                "color": "#ffffff"
+              }
+            },
+            "show": true,
+            "radius": 15
+          }
+        ],
+        "title": [
+          {
+            "fontSize": 10,
+            "fontFamily": "Segoe UI",
+            "bold": true
+          },
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            }
+          }
+        ],
+        "subTitle": [
+          {
+            "fontSize": 8,
+            "fontFamily": "Segoe UI"
+          },
+          {
+            "fontColor": {
+              "solid": {
+                "color": "#B3B3B3"
+              }
+            }
+          }
+        ],
+        "spacing": [
+          {
+            "customizeSpacing": true,
+            "spaceBelowTitle": 4,
+            "spaceBelowSubTitle": 4
+          }
+        ],
+        "legend": [
+          {
+            "showTitle": false,
+            "fontFamily": "Segoe UI",
+            "fontSize": 8
+          }
+        ],
+        "valueAxis": [
+          {
+            "fontSize": 8,
+            "fontFamily": "Segoe UI",
+            "titleFontSize": 8,
+            "titleFontFamily": "Segoe UI",
+            "showAxisTitle": false,
+            "innerPadding": 65
+          }
+        ],
+        "categoryAxis": [
+          {
+            "fontSize": 8,
+            "fontFamily": "Segoe UI",
+            "titleFontSize": 8,
+            "titleFontFamily": "Segoe UI",
+            "showAxisTitle": false,
+            "innerPadding": 65
+          }
+        ],
+        "labels": [
+          {
+            "show": true,
+            "fontSize": 8,
+            "fontFamily": "Segoe UI",
+            "titleFontFamily": "Segoe UI",
+            "titleFontSize": 8,
+            "detailFontFamily": "Segoe UI",
+            "detailFontSize": 8,
+            "enableBackground": false,
+            "backgroundColor": {
+              "solid": {
+                "color": "#252423"
+              }
+            },
+            "backgroundTransparency": 90
+          }
+        ],
+        "totals": [
+          {
+            "fontSize": 8,
+            "fontFamily": "Segoe UI",
+            "bold": true
+          }
+        ],
+        "seriesLabels": [
+          {
+            "seriesFontFamily": "Segoe UI",
+            "textSize": 8
+          }
+        ],
+        "error": [
+          {
+            "labelFontFamily": "Segoe UI",
+            "labelFontSize": 8
+          }
+        ],
+        "padding": [
+          {
+            "top": 20,
+            "right": 20,
+            "bottom": 20,
+            "left": 20
+          }
+        ],
+        "lineStyles": [
+          {
+            "strokeWidth": 3,
+            "lineChartType": "smooth",
+            "interpolationSmooth": "monotoneX",
+            "showMarker": true,
+            "markerShape": "circle",
+            "markerSize": 5
+          }
+        ]
+      }
+    },
+    "shape": {
+      "*": {
+        "padding": [
+          {
+            "top": 0,
+            "right": 0,
+            "bottom": 0,
+            "left": 0
+          }
+        ]
+      }
+    },
+    "textbox": {
+      "*": {
+        "*": [
+          {
+            "fontSize": 16,
+            "fontFamily": "Segoe UI"
+          }
+        ],
+        "padding": [
+          {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          }
+        ],
+        "background": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "cardVisual": {
+      "*": {
+        "layout": [
+          {
+            "maxTiles": 4,
+            "cellPadding": 16,
+            "verticalAlignment": "middle"
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "shapeCustomRectangle": [
+          {
+            "$id": "default",
+            "tileShape": "rectangleRounded",
+            "rectangleRoundedCurve": 10
+          }
+        ],
+        "background": [
+          {
+            "show": false
+          }
+        ],
+        "outline": [
+          {
+            "$id": "default",
+            "lineColor": {
+              "solid": {
+                "color": "#ffffff"
+              }
+            },
+            "show": true
+          }
+        ]
+      }
+    },
+    "slicer": {
+      "*": {
+        "padding": [
+          {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "background": [
+          {
+            "show": false
+          }
+        ]
+      }
+    },
+    "advancedSlicerVisual": {
+      "*": {
+        "title": [
+          {
+            "show": false
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "background": [
+          {
+            "show": false
+          }
+        ],
+        "shape": [
+          {
+            "rectangleRoundedCurve": 15
+          }
+        ],
+        "padding": [
+          {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          }
+        ]
+      }
+    },
+    "pageNavigator": {
+      "*": {
+        "padding": [
+          {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "shape": [
+          {
+            "rectangleRoundedCurve": 15
+          }
+        ],
+        "outline": [
+          {
+            "show": true,
+            "$id": "default",
+            "rectangleRoundedCurve": 20,
+            "lineColor": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "bookmarkNavigator": {
+      "*": {
+        "padding": [
+          {
+            "top": 5,
+            "right": 5,
+            "bottom": 5,
+            "left": 5
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ],
+        "outline": [
+          {
+            "show": true,
+            "$id": "default",
+            "lineColor": {
+              "solid": {
+                "color": "#E6E6E6"
+              }
+            }
+          }
+        ],
+        "shape": [
+          {
+            "rectangleRoundedCurve": 15
+          }
+        ]
+      }
+    },
+    "actionButton": {
+      "*": {
+        "text": [
+          {
+            "$id": "default",
+            "show": true,
+            "fontSize": 8,
+            "fontFamily": "Segoe UI",
+            "bold": true,
+            "verticalAlignment": "middle",
+            "horizontalAlignment": "center",
+            "topMargin": 4,
+            "bottomMargin": 4,
+            "rightMargin": 4,
+            "leftMargin": 4
+          }
+        ],
+        "border": [
+          {
+            "show": false
+          }
+        ]
+      }
+    }
+  }
+}
