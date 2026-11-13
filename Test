@@ -1,0 +1,248 @@
+-- Talk-time queries for Digital Effectiveness | Part 2
+-- Source: dim_prod.ws_shared.call_coverage_adobe_sessions2 (1M-call sample, Jun 1 - Sep 9, 2026)
+--
+-- Check before running:
+--   * employee_id is a guess: the column header was cut off in the photo ("...yee_id").
+--   * Talk time here is LAST-SEGMENT talk time, not full handle time.
+--   * Rows with no platform match are kept as 'No platform match' so shares reconcile.
+--   * Minimum cell sizes (200 calls, 30 calls per MSR cell) are starting points; adjust.
+
+
+-- =====================================================================
+-- Q1. Platform overview  -> fills the three stat cards on the platform slide
+-- =====================================================================
+SELECT
+  COALESCE(call_platform_segment, 'No platform match')                    AS platform_segment,
+  COUNT(*)                                                                AS calls,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1)                      AS pct_calls,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 1)                 AS median_talk_min,
+  ROUND(AVG(last_segment_talk_min), 1)                                    AS avg_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.9), 1)                 AS p90_talk_min,
+  ROUND(100.0 * AVG(CASE WHEN cco_segment_count > 1 THEN 1 ELSE 0 END), 1) AS pct_transferred,
+  ROUND(percentile_approx(minutes_call_start_to_first_platform_activity, 0.5), 1)
+                                                                          AS median_min_to_first_platform_activity
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+GROUP BY 1
+ORDER BY calls DESC;
+
+
+-- =====================================================================
+-- Q2. Platform x call reason  -> the grouped-bar chart on the platform slide
+--     Compares platforms WITHIN the same call reason, so harder call types
+--     landing on "Both Platforms" do not drive the result.
+--     Swap taxonomy_domain for theme_name to go one level deeper.
+-- =====================================================================
+SELECT
+  taxonomy_domain,
+  COALESCE(call_platform_segment, 'No platform match')                    AS platform_segment,
+  COUNT(*)                                                                AS calls,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 1)                 AS median_talk_min,
+  ROUND(AVG(last_segment_talk_min), 1)                                    AS avg_talk_min,
+  ROUND(100.0 * AVG(CASE WHEN cco_segment_count > 1 THEN 1 ELSE 0 END), 1) AS pct_transferred
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+  AND taxonomy_domain IS NOT NULL
+GROUP BY 1, 2
+HAVING COUNT(*) >= 200
+ORDER BY taxonomy_domain, platform_segment;
+
+
+-- =====================================================================
+-- Q3. Same-MSR comparison  -> the strongest control
+--     For MSRs who handled the same queue on more than one platform segment,
+--     compare their own median talk time. Removes skill and tenure.
+--     Read it as: positive diff = first-named segment is longer.
+-- =====================================================================
+WITH cell AS (
+  SELECT
+    employee_id,
+    last_segment_queue,
+    call_platform_segment,
+    COUNT(*)                                        AS calls,
+    percentile_approx(last_segment_talk_min, 0.5)   AS median_talk_min
+  FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+  WHERE last_segment_talk_min IS NOT NULL
+    AND call_platform_segment IS NOT NULL
+    AND employee_id IS NOT NULL
+  GROUP BY 1, 2, 3
+  HAVING COUNT(*) >= 30
+),
+piv AS (
+  SELECT
+    employee_id,
+    last_segment_queue,
+    MAX(CASE WHEN call_platform_segment = 'UAD Only'       THEN median_talk_min END) AS uad,
+    MAX(CASE WHEN call_platform_segment = 'OneView Only'   THEN median_talk_min END) AS oneview,
+    MAX(CASE WHEN call_platform_segment = 'Both Platforms' THEN median_talk_min END) AS both_p
+  FROM cell
+  GROUP BY 1, 2
+)
+SELECT
+  last_segment_queue,
+  COUNT(CASE WHEN both_p  IS NOT NULL AND uad     IS NOT NULL THEN 1 END) AS msrs_both_vs_uad,
+  ROUND(AVG(both_p - uad), 2)                                             AS avg_diff_both_minus_uad,
+  COUNT(CASE WHEN both_p  IS NOT NULL AND oneview IS NOT NULL THEN 1 END) AS msrs_both_vs_oneview,
+  ROUND(AVG(both_p - oneview), 2)                                         AS avg_diff_both_minus_oneview,
+  COUNT(CASE WHEN oneview IS NOT NULL AND uad     IS NOT NULL THEN 1 END) AS msrs_oneview_vs_uad,
+  ROUND(AVG(oneview - uad), 2)                                            AS avg_diff_oneview_minus_uad
+FROM piv
+GROUP BY 1
+ORDER BY msrs_both_vs_uad DESC;
+
+
+-- =====================================================================
+-- Q4. Weekly trend by platform  -> interim version of the trend slide
+--     Only ~14 weeks in this sample. Re-point at the full calls table
+--     for the real trend (send me its name and columns).
+-- =====================================================================
+SELECT
+  date_trunc('week', start_ts)                                            AS week_start,
+  COALESCE(call_platform_segment, 'No platform match')                    AS platform_segment,
+  COUNT(*)                                                                AS calls,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY date_trunc('week', start_ts)), 1)
+                                                                          AS pct_of_week_calls,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 2)                 AS median_talk_min,
+  ROUND(AVG(last_segment_talk_min), 2)                                    AS avg_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.9), 2)                 AS p90_talk_min
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+GROUP BY 1, 2
+ORDER BY 1, 2;
+
+
+-- =====================================================================
+-- Q5. Mix vs rate  -> is talk time up because calls got longer,
+--     or because the mix shifted toward longer queues?
+--     fixed_mix_avg holds each queue's share at its first-month level.
+--     If actual_avg rises but fixed_mix_avg is flat, it is mix shift.
+-- =====================================================================
+WITH base AS (
+  SELECT
+    date_trunc('week', start_ts) AS week_start,
+    sample_month,
+    last_segment_queue,
+    last_segment_talk_min
+  FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+  WHERE last_segment_talk_min IS NOT NULL
+    AND last_segment_queue IS NOT NULL
+),
+first_month AS (
+  SELECT MIN(sample_month) AS m FROM base
+),
+base_mix AS (
+  SELECT
+    b.last_segment_queue,
+    COUNT(*) * 1.0 / SUM(COUNT(*)) OVER () AS base_share
+  FROM base b
+  JOIN first_month f ON b.sample_month = f.m
+  GROUP BY 1
+),
+wk_queue AS (
+  SELECT
+    week_start,
+    last_segment_queue,
+    COUNT(*)                   AS calls,
+    AVG(last_segment_talk_min) AS avg_talk
+  FROM base
+  GROUP BY 1, 2
+)
+SELECT
+  w.week_start,
+  SUM(w.calls)                                                        AS calls,
+  ROUND(SUM(w.calls * w.avg_talk) / SUM(w.calls), 2)                  AS actual_avg_talk_min,
+  ROUND(SUM(m.base_share * w.avg_talk) / SUM(m.base_share), 2)        AS fixed_mix_avg_talk_min
+FROM wk_queue w
+JOIN base_mix m ON w.last_segment_queue = m.last_segment_queue
+GROUP BY 1
+ORDER BY 1;
+
+
+-- =====================================================================
+-- Q6. Addressable minutes  -> sizes how much call time is fixable in the app
+--     Navigation / UX, Findability, Technical Failure and Setup gaps are
+--     digitally fixable; Policy, Merchant-controlled and Processing delays are not.
+-- =====================================================================
+SELECT
+  detail_cause_family,
+  is_digital,
+  COUNT(*)                                                        AS calls,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1)              AS pct_calls,
+  ROUND(SUM(last_segment_talk_min))                               AS talk_minutes,
+  ROUND(100.0 * SUM(last_segment_talk_min)
+        / SUM(SUM(last_segment_talk_min)) OVER (), 1)             AS pct_talk_minutes,
+  ROUND(AVG(last_segment_talk_min), 1)                            AS avg_talk_min
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+  AND detail_cause_family IS NOT NULL
+GROUP BY 1, 2
+ORDER BY talk_minutes DESC;
+
+
+-- =====================================================================
+-- Q7. Talk time by theme  -> which call reasons run longest and cost the most
+--     minutes_rank orders themes by total talk minutes (volume x length),
+--     which is what drives overall average talk time.
+--     Note: this is last-segment talk time. If you have full handle time
+--     (talk + hold + after-call work) in another table, join it here instead.
+-- =====================================================================
+SELECT
+  taxonomy_domain,
+  theme_name,
+  COUNT(*)                                                        AS calls,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (), 1)              AS pct_calls,
+  ROUND(AVG(last_segment_talk_min), 1)                            AS avg_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 1)         AS median_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.9), 1)         AS p90_talk_min,
+  ROUND(SUM(last_segment_talk_min))                               AS talk_minutes,
+  ROUND(100.0 * SUM(last_segment_talk_min)
+        / SUM(SUM(last_segment_talk_min)) OVER (), 1)             AS pct_talk_minutes,
+  ROUND(100.0 * AVG(CASE WHEN cco_segment_count > 1 THEN 1 ELSE 0 END), 1) AS pct_transferred,
+  RANK() OVER (ORDER BY SUM(last_segment_talk_min) DESC)          AS minutes_rank
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+  AND theme_name IS NOT NULL
+GROUP BY 1, 2
+HAVING COUNT(*) >= 200
+ORDER BY talk_minutes DESC;
+
+
+-- =====================================================================
+-- Q8. Talk time by theme and month  -> which themes are getting longer
+--     Compare avg_talk_min across months per theme; pct_month_calls shows
+--     whether a long theme is also growing its share of calls.
+--     The last month is partial (sample ends Sep 9, 2026).
+-- =====================================================================
+SELECT
+  theme_name,
+  sample_month,
+  COUNT(*)                                                        AS calls,
+  ROUND(100.0 * COUNT(*) / SUM(COUNT(*)) OVER (PARTITION BY sample_month), 2)
+                                                                  AS pct_month_calls,
+  ROUND(AVG(last_segment_talk_min), 2)                            AS avg_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 2)         AS median_talk_min
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+  AND theme_name IS NOT NULL
+GROUP BY 1, 2
+HAVING COUNT(*) >= 100
+ORDER BY theme_name, sample_month;
+
+
+-- =====================================================================
+-- Q9. Talk time by theme and platform  -> does the platform gap hold
+--     inside each theme? (theme-level version of Q2)
+-- =====================================================================
+SELECT
+  theme_name,
+  COALESCE(call_platform_segment, 'No platform match')            AS platform_segment,
+  COUNT(*)                                                        AS calls,
+  ROUND(AVG(last_segment_talk_min), 1)                            AS avg_talk_min,
+  ROUND(percentile_approx(last_segment_talk_min, 0.5), 1)         AS median_talk_min,
+  ROUND(100.0 * AVG(CASE WHEN cco_segment_count > 1 THEN 1 ELSE 0 END), 1) AS pct_transferred
+FROM dim_prod.ws_shared.call_coverage_adobe_sessions2
+WHERE last_segment_talk_min IS NOT NULL
+  AND theme_name IS NOT NULL
+GROUP BY 1, 2
+HAVING COUNT(*) >= 200
+ORDER BY theme_name, platform_segment;
